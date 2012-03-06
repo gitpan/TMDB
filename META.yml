@@ -8,14 +8,15 @@ build_requires:
 configure_requires:
   Module::Build: 0.38
 dynamic_config: 1
-generated_by: 'Module::Build version 0.38, CPAN::Meta::Converter version 2.113640'
+generated_by: 'Module::Build version 0.38, CPAN::Meta::Converter version 2.120351'
 keywords:
-  - tmdb
+  - movies
   - movie
-  - imdb
-  - api
   - themoviedb
-  - moviedb
+  - tmdb
+  - api
+  - metadata
+  - imdb
 license: perl
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
@@ -24,7 +25,13 @@ name: TMDB
 provides:
   TMDB:
     file: lib/TMDB.pm
-    version: 0.03
+    version: 0.04_01
+  TMDB::Collection:
+    file: lib/TMDB/Collection.pm
+    version: 0
+  TMDB::Config:
+    file: lib/TMDB/Config.pm
+    version: 0
   TMDB::Movie:
     file: lib/TMDB/Movie.pm
     version: 0
@@ -39,12 +46,15 @@ provides:
     version: 0
 requires:
   Encode: 0
+  HTTP::Tiny: 0
   JSON::Any: 0
-  LWP::UserAgent: 0
-  perl: v5.8.1
+  Locale::Codes: 0
+  Object::Tiny: 0
+  Params::Validate: 0
+  URI::Encode: 0
 resources:
   bugtracker: http://rt.cpan.org/Public/Dist/Display.html?Name=TMDB
   homepage: https://github.com/mithun/perl-tmdb
   license: http://dev.perl.org/licenses/
   repository: git://github.com/mithun/perl-tmdb.git
-version: 0.03
+version: 0.04_01

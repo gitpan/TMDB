@@ -10,84 +10,129 @@ use Carp qw(croak carp);
 #######################
 # LOAD CPAN MODULES
 #######################
-use Encode qw();
-use LWP::UserAgent;
 use JSON::Any;
+use Encode qw();
+use HTTP::Tiny qw();
+use URI::Encode qw();
+use Locale::Codes::Language qw(all_language_codes);
+use Object::Tiny qw(apikey apiurl lang debug client encoder json);
+use Params::Validate qw(validate_with SCALAR OBJECT BOOLEAN);
+
+#######################
+# PACKAGE VARIABLES
+#######################
+
+# Valid language codes
+my %valid_lang_codes = map { $_ => 1 } all_language_codes('alpha-2');
+
+# Default Headers
+my $default_headers = { Accept => 'application/json', };
+
+# Default User Agent
+my $default_ua = 'perl-tmdb-client';
 
 #######################
 # PUBLIC METHODS
 #######################
 
+## ====================
 ## Constructor
+## ====================
 sub new {
     my $class = shift;
-    my $args  = shift;
+    my %opts  = validate_with(
+        params => \@_,
+        spec   => {
+            apikey => { type => SCALAR, },
+            apiurl => {
+                type     => SCALAR,
+                optional => 1,
+                default  => 'http://api.themoviedb.org/3',
+            },
+            lang => {
+                type      => SCALAR,
+                optional  => 1,
+                callbacks => {
+                    'valid language code' =>
+                        sub { $valid_lang_codes{ lc $_[0] } },
+                },
+            },
+            client => {
+                type     => OBJECT,
+                isa      => 'HTTP::Tiny',
+                optional => 1,
+                default  => HTTP::Tiny->new(
+                    agent           => $default_ua,
+                    default_headers => $default_headers,
+                ),
+            },
+            encoder => {
+                type     => OBJECT,
+                isa      => 'URI::Encode',
+                optional => 1,
+                default  => URI::Encode->new(),
+            },
+            json => {
+                type     => OBJECT,
+                can      => 'Load',
+                optional => 1,
+                default  => JSON::Any->new(),
+            },
+            debug => {
+                type     => BOOLEAN,
+                optional => 1,
+                default  => 0,
+            },
+        },
+    );
 
-    my $self = {};
-    bless $self, $class;
-    return $self->_init($args);
+    $opts{lang} = lc $opts{lang} if $opts{lang};
+    my $self = $class->SUPER::new(%opts);
+    return $self;
 } ## end sub new
 
+## ====================
 ## Talk
+## ====================
 sub talk {
-    my $self = shift;
-    my $args = shift;
+    my ( $self, $args ) = @_;
 
-    my $get = join( '/',
-        $self->api_url, $self->api_version, $args->{method},
-        $self->lang,    $self->api_type,    $self->api_key,
-        $args->{params} );
+    # Build Call
+    my $url =
+        $self->apiurl . '/' . $args->{method} . '?api_key=' . $self->apikey;
+    if ( $args->{params} ) {
+        foreach my $param ( sort { lc $a cmp lc $b } %{ $args->{params} } ) {
+            next unless defined $args->{params}->{$param};
+            $url .= "&${param}=" . $args->{params}->{$param};
+        }
+    } ## end if ( $args->{params} )
 
-    my $response = $self->ua->get($get);
-    return unless $response->is_success();
+    # Encode
+    $url = $self->encoder->encode($url);
 
-    my $perl_ref =
-        JSON::Any->new()
-        ->Load(
-        Encode::encode( 'utf-8-strict', $response->decoded_content ) );
-    return if not $perl_ref->[0];
-    return if ( $perl_ref->[0] =~ /nothing\s*found/ix );
-    return $perl_ref;
+    # Talk
+    warn "DEBUG: GET -> $url\n" if $self->debug;
+    my $response = $self->client->get($url);
+
+    # Debug
+    if ( $self->debug ) {
+        warn "DEBUG: Got a successful response\n" if $response->{success};
+        warn "DEBUG: Got Status -> $response->{status}\n";
+        warn "DEBUG: Got Reason -> $response->{reason}\n"
+            if $response->{reason};
+        warn "DEBUG: Got Headers -> $response->{headers}\n"
+            if $response->{headers};
+        warn "DEBUG: Got Content -> $response->{content}\n"
+            if $response->{content};
+    } ## end if ( $self->debug )
+
+    # Return
+    return unless $response->{success};  # Error
+    return unless $response->{content};  # Blank Content
+    return $self->json->decode(
+        Encode::encode( 'utf-8-strict', $response->{content} ) )
+        ;                                # Real Response
 } ## end sub talk
-
-## Accessors
-sub api_key     { return shift->{_api_key}; }
-sub api_type    { return shift->{_api_type}; }
-sub api_url     { return shift->{_api_url}; }
-sub api_version { return shift->{_api_version}; }
-sub lang        { return shift->{_lang}; }
-sub ua          { return shift->{_ua}; }
-
-#######################
-# PRIVATE METHODS
-#######################
-
-## Initialize
-sub _init {
-    my $self = shift;
-    my $args = shift;
-
-    # Default User Agent
-    my $ua = LWP::UserAgent->new( agent => "perl-tmdb/" . $args->{_VERSION} );
-
-    # Required Args
-    $self->{_api_key} = $args->{api_key} || croak "API key is not provided";
-
-    # Optional Args
-    $self->{_ua}   = $args->{ua}   || $ua;      # UserAgent
-    $self->{_lang} = $args->{lang} || 'en-US';  # Language
-
-    # Check user agent
-    croak "LWP::UserAgent expected"
-        unless $self->{_ua}->isa('LWP::UserAgent');
-
-    # API settings
-    $self->{_api_url}     = 'http://api.themoviedb.org';  # Base URL
-    $self->{_api_version} = '2.1';                        # Version
-    $self->{_api_type}    = 'json';                       # Always use JSON
-
-    return $self;
-} ## end sub _init
 
 #######################
 1;
