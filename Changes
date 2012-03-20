@@ -2,6 +2,18 @@ Version History for TMDB
 Mithun Ayachit
 
 
+0.052
+=====
+
+-   Fixed HTTP::Tiny dependency
+
+0.051
+=====
+
+-   Added lists for popular, now_playing and top_rated
+-   Moved latest movie into a search method
+-   Document search configuration
+
 0.05
 ====
 
