@@ -1,4 +1,4 @@
-package TMDB::Collection;
+package TMDB::Company;
 
 #######################
 # LOAD CORE MODULES
@@ -47,17 +47,8 @@ sub new {
 ## ====================
 sub info {
     my $self = shift;
-    return $self->session->talk(
-        {
-            method => 'collection/' . $self->id(),
-            params => {
-                language => $self->session->lang
-                ? $self->session->lang
-                : undef,
-            },
-        }
-    );
-} ## end sub info
+    return $self->session->talk( { method => 'company/' . $self->id(), } );
+}
 
 ## ====================
 ## VERSION
@@ -66,7 +57,7 @@ sub version {
     my ($self) = @_;
     my $response = $self->session->talk(
         {
-            method       => 'collection/' . $self->id(),
+            method       => 'company/' . $self->id(),
             want_headers => 1,
         }
     ) or return;
@@ -76,32 +67,40 @@ sub version {
 } ## end sub version
 
 ## ====================
+## MOVIES
+## ====================
+sub movies {
+    my ( $self, $max_pages ) = @_;
+    return $self->session->paginate_results(
+        {
+            method    => 'company/' . $self->id() . '/movies',
+            max_pages => $max_pages,
+        }
+    );
+} ## end sub movies
+
+## ====================
 ## INFO HELPERS
 ## ====================
 
-# All titles
-sub titles { return shift->_parse_parts('title'); }
+# Name
+sub name {
+    my ($self) = @_;
+    my $info = $self->info();
+    return unless $info;
+    return $info->{name} || q();
+} ## end sub name
 
-# Title IDs
-sub ids { return shift->_parse_parts('id'); }
+# Logo
+sub logo {
+    my ($self) = @_;
+    my $info = $self->info();
+    return unless $info;
+    return $info->{logo_path} || q();
+} ## end sub logo
 
-#######################
-# PRIVATE METHODS
-#######################
-
-sub _parse_parts {
-    my $self  = shift;
-    my $key   = shift;
-    my $info  = $self->info();
-    my $parts = $info ? $info->{parts} : [];
-    my @stuff;
-    foreach my $part (@$parts) {
-        next unless $part->{$key};
-        push @stuff, $part->{$key};
-    }
-    return @stuff if wantarray;
-    return \@stuff;
-} ## end sub _parse_parts
+# Image
+sub image { return shift->logo(); }
 
 #######################
 1;

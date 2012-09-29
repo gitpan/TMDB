@@ -10,7 +10,7 @@ use Carp qw(croak carp);
 #######################
 # VERSION
 #######################
-our $VERSION = '0.052';
+our $VERSION = '0.06';
 
 #######################
 # LOAD CPAN MODULES
@@ -20,10 +20,12 @@ use Object::Tiny qw(session);
 #######################
 # LOAD DIST MODULES
 #######################
+use TMDB::Genre;
 use TMDB::Movie;
 use TMDB::Config;
 use TMDB::Person;
 use TMDB::Search;
+use TMDB::Company;
 use TMDB::Session;
 use TMDB::Collection;
 
@@ -53,8 +55,9 @@ sub collection {
         @_
     );
 } ## end sub collection
-
+sub company { return TMDB::Company->new( session => shift->session, @_ ); }
 sub config { return TMDB::Config->new( session => shift->session, @_ ); }
+sub genre { return TMDB::Genre->new( session => shift->session, @_ ); }
 sub movie { return TMDB::Movie->new( session => shift->session, @_ ); }
 sub person { return TMDB::Person->new( session => shift->session, @_ ); }
 sub search { return TMDB::Search->new( session => shift->session, @_ ); }
@@ -222,7 +225,11 @@ L<http://help.themoviedb.org/kb/api/configuration> for more details.
 
         # Search People
         my $search  = $tmdb->search();
-        my @results = $search->person('Brad Pitt');  # Search by Name
+        my @results = $search->person('Brad Pitt');	      # Search by Name
+
+		# Search Companies
+        my $search  = $tmdb->search();
+        my @results = $search->company('Sony Pictures');  # Search by Name
 
         # Get Lists
         my $lists       = $tmdb->search();
@@ -274,6 +281,9 @@ L<http://help.themoviedb.org/kb/api/configuration> for more details.
         # Latest Movie on TMDB
         print Dumper $movie->latest;
 
+		# Get TMDB's version to check if anything changed
+		print $movie->version;
+
 
 =head1 PEOPLE
 
@@ -297,6 +307,9 @@ L<http://help.themoviedb.org/kb/api/configuration> for more details.
         print $person->executive_produced;  # List of titles as an Executive Producer
         print $person->wrote;               # List of titles as a writer/screenplay
 
+		# Get TMDB's version to check if anything changed
+		print $person->version;
+
 
 =head1 COLLECTION
 
@@ -310,6 +323,35 @@ L<http://help.themoviedb.org/kb/api/configuration> for more details.
         # Filtered Collection Data
         print $collection->titles;  # List of titles in the collection
         print $collection->ids;     # List of movie IDs in the collection
+
+		# Get TMDB's version to check if anything changed
+		print $collection->version;
+
+
+=head1 COMPANY
+
+		# Get the company object
+		my $company = $tmdb->company(id => '1');
+
+		# Company info (as returned by the API)
+		use Data::Dumper qw(Dumper);
+		print Dumper $company->info;
+		print Dumper $company->movies;
+
+		# Filtered company data
+		print $company->name; # Name of the Company
+		print $company->logo; # Logo
+
+		# Get TMDB's version to check if anything changed
+		print $company->version;
+
+=head1 GENRE
+
+		# Get a list
+		my @genres = $tmdb->genre->list();
+
+		# Get a list of movies
+		my @movies = $tmdb->genre(id => '35')->movies;
 
 
 =head1 DEPENDENCIES
@@ -334,11 +376,22 @@ L<http://help.themoviedb.org/kb/api/configuration> for more details.
 
 =head1 BUGS AND LIMITATIONS
 
+This module not (yet!) support POST-ing data to TheMovieDB
+
 All data returned is UTF-8 encoded
 
 Please report any bugs or feature requests to C<bug-tmdb@rt.cpan.org>, or
 through the web interface at
 L<http://rt.cpan.org/Public/Dist/Display.html?Name=TMDB>
+
+=head1 SEE ALSO
+
+=item L<The MovieDB API|http://help.themoviedb.org/kb/api/about-3>
+
+=item L<API Support|http://help.themoviedb.org/discussions/problems>
+
+=item L<WWW::TMDB::API>
+
 
 =head1 AUTHOR
 

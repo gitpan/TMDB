@@ -1,4 +1,4 @@
-package TMDB::Collection;
+package TMDB::Genre;
 
 #######################
 # LOAD CORE MODULES
@@ -34,7 +34,10 @@ sub new {
                 type => OBJECT,
                 isa  => 'TMDB::Session',
             },
-            id => { type => SCALAR, },
+            id => {
+                type     => SCALAR,
+                optional => 1,
+            },
         },
     );
 
@@ -43,13 +46,13 @@ sub new {
 } ## end sub new
 
 ## ====================
-## INFO
+## LIST
 ## ====================
-sub info {
-    my $self = shift;
-    return $self->session->talk(
+sub list {
+    my ($self) = @_;
+    my $response = $self->session->talk(
         {
-            method => 'collection/' . $self->id(),
+            method => 'genre/list',
             params => {
                 language => $self->session->lang
                 ? $self->session->lang
@@ -57,51 +60,32 @@ sub info {
             },
         }
     );
-} ## end sub info
+    return unless $response;
+
+    my $genres;
+    $genres = $response->{genres} || [];
+    return @$genres if wantarray;
+    return $genres;
+} ## end sub list
 
 ## ====================
-## VERSION
+## MOVIES
 ## ====================
-sub version {
-    my ($self) = @_;
-    my $response = $self->session->talk(
+sub movies {
+    my ( $self, $max_pages ) = @_;
+    return unless $self->id();
+    return $self->session->paginate_results(
         {
-            method       => 'collection/' . $self->id(),
-            want_headers => 1,
+            method    => 'genre/' . $self->id() . '/movies',
+            max_pages => $max_pages,
+            params    => {
+                language => $self->session->lang
+                ? $self->session->lang
+                : undef,
+            },
         }
-    ) or return;
-    my $version = $response->{etag} || q();
-    $version =~ s{"}{}gx;
-    return $version;
-} ## end sub version
-
-## ====================
-## INFO HELPERS
-## ====================
-
-# All titles
-sub titles { return shift->_parse_parts('title'); }
-
-# Title IDs
-sub ids { return shift->_parse_parts('id'); }
-
-#######################
-# PRIVATE METHODS
-#######################
-
-sub _parse_parts {
-    my $self  = shift;
-    my $key   = shift;
-    my $info  = $self->info();
-    my $parts = $info ? $info->{parts} : [];
-    my @stuff;
-    foreach my $part (@$parts) {
-        next unless $part->{$key};
-        push @stuff, $part->{$key};
-    }
-    return @stuff if wantarray;
-    return \@stuff;
-} ## end sub _parse_parts
+    );
+} ## end sub movies
 
 #######################
 1;

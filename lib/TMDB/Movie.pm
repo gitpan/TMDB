@@ -11,8 +11,8 @@ use Carp qw(croak carp);
 # LOAD CPAN MODULES
 #######################
 use Object::Tiny qw(id session);
+use Params::Validate qw(validate_with :types);
 use Locale::Codes::Country qw(all_country_codes);
-use Params::Validate qw(validate_with SCALAR OBJECT);
 
 #######################
 # LOAD DIST MODULES
@@ -49,13 +49,16 @@ sub new {
 sub info {
     my $self   = shift;
     my $params = {};
-    $params->{lang} = $self->session->lang if $self->session->lang;
-    return $self->session->talk(
+    $params->{language} = $self->session->lang if $self->session->lang;
+    my $info = $self->session->talk(
         {
             method => 'movie/' . $self->id,
             params => $params
         }
     );
+    return unless $info;
+    $self->{id} = $info->{id};  # Reset TMDB ID
+    return $info;
 } ## end sub info
 
 ## ====================
@@ -67,8 +70,8 @@ sub alternative_titles {
 
     # Valid Country codes
     if ($country) {
-        my %valid_country_codes =
-            map { $_ => 1 } all_country_codes('alpha-2');
+        my %valid_country_codes
+            = map { $_ => 1 } all_country_codes('alpha-2');
         $country = uc $country;
         return unless $valid_country_codes{$country};
     } ## end if ($country)
@@ -171,29 +174,97 @@ sub translations {
 } ## end sub translations
 
 ## ====================
+## SIMILAR MOVIES
+## ====================
+sub similar {
+    my ( $self, $max_pages ) = @_;
+    return $self->session->paginate_results(
+        {
+            method    => 'movie/' . $self->id() . '/similar_movies',
+            max_pages => $max_pages,
+            params    => {
+                language => $self->session->lang
+                ? $self->session->lang
+                : undef,
+            },
+        }
+    );
+} ## end sub similar
+sub similar_movies { return shift->similar(@_); }
+
+## ====================
+## VERSION
+## ====================
+sub version {
+    my ($self) = @_;
+    my $response = $self->session->talk(
+        {
+            method       => 'movie/' . $self->id(),
+            want_headers => 1,
+        }
+    ) or return;
+    my $version = $response->{etag} || q();
+    $version =~ s{"}{}gx;
+    return $version;
+} ## end sub version
+
+## ====================
 ## INFO HELPERS
 ## ====================
 
 # Title
-sub title { return shift->info()->{title} || q(); }
+sub title {
+    my ($self) = @_;
+    my $info = $self->info();
+    return unless $info;
+    return $info->{title} || q();
+} ## end sub title
 
 # Release Year
-sub year { return ( split( /\-/, shift->info()->{release_date} ) )[0]; }
+sub year {
+    my ($self) = @_;
+    my $info = $self->info();
+    return unless $info;
+    my $full_date = $info->{release_date} || q();
+    return unless $full_date;
+    my ($year) = split( /\-/, $full_date );
+    return $year;
+} ## end sub year
 
 # Tagline
-sub tagline { return shift->info()->{tagline} || q(); }
+sub tagline {
+    my ($self) = @_;
+    my $info = $self->info();
+    return unless $info;
+    return $info->{tagline} || q();
+} ## end sub tagline
 
 # Overview
-sub overview { return shift->info()->{overview} || q(); }
+sub overview {
+    my ($self) = @_;
+    my $info = $self->info();
+    return unless $info;
+    return $info->{overview} || q();
+} ## end sub overview
 
 # IMDB ID
-sub imdb_id { return shift->info()->{imdb_id} || q(); }
+sub imdb_id {
+    my ($self) = @_;
+    my $info = $self->info();
+    return unless $info;
+    return $info->{imdb_id} || q();
+} ## end sub imdb_id
 
 # Description
 sub description { return shift->overview(); }
 
 # Collection
-sub collection { return shift->info()->{belongs_to_collection}->{id} || q(); }
+sub collection {
+    my ($self) = @_;
+    my $info = $self->info();
+    return unless $info;
+    return $info->{belongs_to_collection}->{id} || q();
+} ## end sub collection
 
 # Genres
 sub genres {

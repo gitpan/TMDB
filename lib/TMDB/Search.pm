@@ -10,8 +10,8 @@ use Carp qw(croak carp);
 #######################
 # LOAD CPAN MODULES
 #######################
+use Params::Validate qw(validate_with :types);
 use Object::Tiny qw(session include_adult max_pages);
-use Params::Validate qw(validate_with OBJECT SCALAR);
 
 #######################
 # LOAD DIST MODULES
@@ -46,7 +46,7 @@ sub new {
             max_pages => {
                 type      => SCALAR,
                 optional  => 1,
-                default   => 5,
+                default   => 1,
                 callbacks => { 'integer' => sub { $_[0] =~ m{\d+} }, },
             },
         },
@@ -78,7 +78,7 @@ sub movie {
         query         => $string,
         include_adult => $self->include_adult,
     };
-    $params->{lang} = $self->session->lang if $self->session->lang;
+    $params->{language} = $self->session->lang if $self->session->lang;
 
     warn "DEBUG: Searching for $string\n" if $self->session->debug;
     return $self->_search(
@@ -105,22 +105,86 @@ sub person {
 } ## end sub person
 
 ## ====================
+## Search Company
+## ====================
+sub company {
+    my ( $self, $string ) = @_;
+
+    warn "DEBUG: Searching for $string\n" if $self->session->debug;
+    return $self->_search(
+        {
+            method => 'search/company',
+            params => { query => $string, },
+        }
+    );
+} ## end sub company
+
+## ====================
 ## LISTS
 ## ====================
 
 # Latest
 sub latest { return shift->session->talk( { method => 'latest/movie', } ); }
 
+# Upcoming
+sub upcoming {
+    my ($self) = @_;
+    return $self->_search(
+        {
+            method => 'movie/upcoming',
+            params => {
+                language => $self->session->lang
+                ? $self->session->lang
+                : undef,
+            },
+        }
+    );
+} ## end sub upcoming
+
 # Now Playing
 sub now_playing {
-    return shift->_search( { method => 'movie/now-playing', } );
-}
+    my ($self) = @_;
+    return $self->_search(
+        {
+            method => 'movie/now-playing',
+            params => {
+                language => $self->session->lang
+                ? $self->session->lang
+                : undef,
+            },
+        }
+    );
+} ## end sub now_playing
 
 # Popular
-sub popular { return shift->_search( { method => 'movie/popular', } ); }
+sub popular {
+    my ($self) = @_;
+    return $self->_search(
+        {
+            method => 'movie/popular',
+            params => {
+                language => $self->session->lang
+                ? $self->session->lang
+                : undef,
+            },
+        }
+    );
+} ## end sub popular
 
 # Top rated
-sub top_rated { return shift->_search( { method => 'movie/top-rated', } ); }
+sub top_rated {
+    my ($self) = @_;
+    return $self->_search(
+        {
+            method => 'movie/top-rated',
+            params => {
+                language => $self->session->lang
+                ? $self->session->lang
+                : undef,
+            },
+        }
+    );
+} ## end sub top_rated
 
 #######################
 # PRIVATE METHODS
@@ -132,30 +196,8 @@ sub top_rated { return shift->_search( { method => 'movie/top-rated', } ); }
 sub _search {
     my $self = shift;
     my $args = shift;
-
-    my $response = $self->session->talk($args);
-    my $results = $response->{results} || [];
-
-    # Paginate
-    if (    $response->{page}
-        and $response->{total_pages}
-        and ( $response->{total_pages} > $response->{page} ) )
-    {
-        my $page_limit   = $self->max_pages();
-        my $current_page = $response->{page};
-        while ($page_limit) {
-            $current_page++;
-            $args->{params}->{page} = $current_page;
-            my $next_page = $self->session->talk($args);
-            push @$results, @{ $next_page->{results} },;
-            last if ( $next_page->{page} == $next_page->{total_pages} );
-            $page_limit--;
-        } ## end while ($page_limit)
-    } ## end if ( $response->{page}...)
-
-    # Done
-    return @$results if wantarray;
-    return $results;
+    $args->{max_pages} = $self->max_pages();
+    return $self->session->paginate_results($args);
 } ## end sub _search
 
 #######################

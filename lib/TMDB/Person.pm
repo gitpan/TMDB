@@ -11,7 +11,7 @@ use Carp qw(croak carp);
 # LOAD CPAN MODULES
 #######################
 use Object::Tiny qw(id session);
-use Params::Validate qw(validate_with SCALAR OBJECT);
+use Params::Validate qw(validate_with :types);
 
 #######################
 # LOAD DIST MODULES
@@ -70,33 +70,58 @@ sub images {
 } ## end sub images
 
 ## ====================
+## VERSION
+## ====================
+sub version {
+    my ($self) = @_;
+    my $response = $self->session->talk(
+        {
+            method       => 'person/' . $self->id(),
+            want_headers => 1,
+        }
+    ) or return;
+    my $version = $response->{etag} || q();
+    $version =~ s{"}{}gx;
+    return $version;
+} ## end sub version
+
+## ====================
 ## INFO HELPERS
 ## ====================
 
 # Name
 sub name {
-    my $name = shift->info()->{name} || q();
-    return $name;
-}
+    my ($self) = @_;
+    my $info = $self->info();
+    return unless $info;
+    return $info->{name} || q();
+} ## end sub name
 
 # Alternative names
 sub aka {
-    my @aka = shift->info()->{also_known_as} || [];
+    my ($self) = @_;
+    my $info = $self->info();
+    return unless $info;
+    my @aka = $info->{also_known_as} || [];
     return @aka if wantarray;
     return \@aka;
-}
+} ## end sub aka
 
 # Bio
 sub bio {
-    my $bio = shift->info()->{biography} || q();
-    return $bio;
-}
+    my ($self) = @_;
+    my $info = $self->info();
+    return unless $info;
+    return $info->{biography} || q();
+} ## end sub bio
 
 # Image
 sub image {
-    my $img = shift->info()->{profile_path} || q();
-    return $img;
-}
+    my ($self) = @_;
+    my $info = $self->info();
+    return unless $info;
+    return $info->{profile_path} || q();
+} ## end sub image
 
 ## ====================
 ## CREDIT HELPERS
