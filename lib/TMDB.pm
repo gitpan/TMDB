@@ -10,7 +10,7 @@ use Carp qw(croak carp);
 #######################
 # VERSION
 #######################
-our $VERSION = '0.061';
+our $VERSION = '0.07';
 
 #######################
 # LOAD CPAN MODULES
@@ -43,14 +43,14 @@ sub new {
 
     # Init Session
     $self->{session} = TMDB::Session->new(@args);
-    return $self;
+  return $self;
 } ## end sub new
 
 ## ====================
 ## TMDB OBJECTS
 ## ====================
 sub collection {
-    return TMDB::Collection->new(
+  return TMDB::Collection->new(
         session => shift->session,
         @_
     );
@@ -403,7 +403,7 @@ Mithun Ayachit C<mithun@cpan.org>
 
 =head1 LICENSE AND COPYRIGHT
 
-Copyright (c) 2012, Mithun Ayachit. All rights reserved.
+Copyright (c) 2013, Mithun Ayachit. All rights reserved.
 
 This module is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself. See L<perlartistic>.
