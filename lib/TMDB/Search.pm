@@ -72,7 +72,6 @@ sub movie {
 
     # Trim
     $string =~ s{(?:^\s+)|(?:\s+$)}{};
-    $string .= " $year" if $year;
 
     # Search
     my $params = {
@@ -80,6 +79,7 @@ sub movie {
         include_adult => $self->include_adult,
     };
     $params->{language} = $self->session->lang if $self->session->lang;
+    $params->{year} = $year if $year;
 
     warn "DEBUG: Searching for $string\n" if $self->session->debug;
   return $self->_search(
@@ -108,7 +108,7 @@ sub person {
 } ## end sub person
 
 ## ====================
-## Search Company
+## Search Companies
 ## ====================
 sub company {
     my ( $self, $string ) = @_;
@@ -125,11 +125,62 @@ sub company {
 } ## end sub company
 
 ## ====================
+## Search Lists
+## ====================
+sub list {
+    my ( $self, $string ) = @_;
+
+    warn "DEBUG: Searching for $string\n" if $self->session->debug;
+  return $self->_search(
+        {
+            method => 'search/list',
+            params => {
+                query => $string,
+            },
+        }
+    );
+} ## end sub list
+
+## ====================
+## Search Keywords
+## ====================
+sub keyword {
+    my ( $self, $string ) = @_;
+
+    warn "DEBUG: Searching for $string\n" if $self->session->debug;
+  return $self->_search(
+        {
+            method => 'search/keyword',
+            params => {
+                query => $string,
+            },
+        }
+    );
+} ## end sub keyword
+
+## ====================
+## Search Collection
+## ====================
+sub collection {
+    my ( $self, $string ) = @_;
+
+    warn "DEBUG: Searching for $string\n" if $self->session->debug;
+  return $self->_search(
+        {
+            method => 'search/collection',
+            params => {
+                query => $string,
+            },
+        }
+    );
+} ## end sub collection
+
+## ====================
 ## LISTS
 ## ====================
 
 # Latest
-sub latest { return shift->session->talk( { method => 'latest/movie', } ); }
+sub latest { return shift->session->talk( { method => 'movie/latest', } ); }
 
 # Upcoming
 sub upcoming {
@@ -182,6 +233,103 @@ sub top_rated {
         }
     );
 } ## end sub top_rated
+
+# Popular People
+sub popular_people {
+    my ($self) = @_;
+  return $self->_search(
+        {
+            method => 'person/popular',
+            params => {
+                language => $self->session->lang ? $self->session->lang : undef,
+            },
+        }
+    );
+} ## end sub popular_people
+
+# Latest Person
+sub latest_person {
+  return shift->session->talk(
+        {
+            method => 'person/latest',
+        }
+    );
+} ## end sub latest_person
+
+#######################
+# DISCOVER
+#######################
+sub discover {
+    my ( $self, @args ) = @_;
+    my %options = validate_with(
+        params => [@args],
+        spec   => {
+            sort_by => {
+                type      => SCALAR,
+                optional  => 1,
+                default   => 'popularity.asc',
+                callbacks => {
+                    'valid flag' => sub {
+                             ( lc $_[0] eq 'vote_average.desc' )
+                          or ( lc $_[0] eq 'vote_average.asc' )
+                          or ( lc $_[0] eq 'release_date.desc' )
+                          or ( lc $_[0] eq 'release_date.asc' )
+                          or ( lc $_[0] eq 'popularity.desc' )
+                          or ( lc $_[0] eq 'popularity.asc' );
+                    },
+                },
+            },
+            year => {
+                type     => SCALAR,
+                optional => 1,
+                regex    => qr/^\d{4}\-\d{2}\-\d{2}$/
+            },
+            'release_date.gte' => {
+                type     => SCALAR,
+                optional => 1,
+                regex    => qr/^\d{4}\-\d{2}\-\d{2}$/
+            },
+            'release_date.lte' => {
+                type     => SCALAR,
+                optional => 1,
+                regex    => qr/^\d{4}\-\d{2}\-\d{2}$/
+            },
+            'vote_count.gte' => {
+                type     => SCALAR,
+                optional => 1,
+                regex    => qr/^\d+$/
+            },
+            'vote_average.gte' => {
+                type      => SCALAR,
+                optional  => 1,
+                regex     => qr/^\d{1,2}\.\d{1,}$/,
+                callbacks => {
+                    average => sub { $_[0] <= 10 },
+                },
+            },
+            with_genres => {
+                type     => SCALAR,
+                optional => 1,
+            },
+            with_companies => {
+                type     => SCALAR,
+                optional => 1,
+            },
+        },
+    );
+
+  return $self->_search(
+        {
+            method => 'discover/movie',
+            params => {
+                language => $self->session->lang ? $self->session->lang : undef,
+                include_adult => $self->include_adult,
+                %options,
+            },
+        }
+    );
+
+} ## end sub discover
 
 #######################
 # PRIVATE METHODS
