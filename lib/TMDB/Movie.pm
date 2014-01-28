@@ -338,6 +338,7 @@ sub collection {
 sub genres {
     my $self = shift;
     my $info = $self->info();
+  return unless $info;
     my @genres;
     if ( exists $info->{genres} ) {
         foreach ( @{ $info->{genres} } ) { push @genres, $_->{name}; }
@@ -346,6 +347,28 @@ sub genres {
   return @genres if wantarray;
   return \@genres;
 } ## end sub genres
+
+# Homepage
+sub homepage {
+    my ($self) = @_;
+    my $info = $self->info();
+  return unless $info;
+  return $info->{homepage} || q();
+} ## end sub homepage
+
+# Studios
+sub studios {
+    my $self = shift;
+    my $info = $self->info();
+  return unless $info;
+    my @studios;
+    if ( exists $info->{production_companies} ) {
+        foreach ( @{ $info->{production_companies} } ) { push @studios, $_->{name}; }
+    }
+
+  return @studios if wantarray;
+  return \@studios;
+} ## end sub studios
 
 ## ====================
 ## CAST/CREW HELPERS
@@ -374,27 +397,33 @@ sub writer { return shift->_crew_names('Screenplay|Writer|Author|Novel'); }
 # Poster
 sub poster {
     my $self = shift;
-  return $self->info()->{poster_path} || q();
+    my $info = $self->info();
+  return unless $info;
+  return $info->{poster_path} || q();
 } ## end sub poster
 
 # Posters
 sub posters {
     my $self     = shift;
     my $response = $self->images();
-    my $posters  = $response->{posters} || [];
+  return unless $response;
+    my $posters = $response->{posters} || [];
   return $self->_image_urls($posters);
 } ## end sub posters
 
 # Backdrop
 sub backdrop {
     my $self = shift;
-  return $self->info()->{backdrop_path} || q();
+    my $info = $self->info();
+  return unless $info;
+  return $info->{backdrop_path} || q();
 } ## end sub backdrop
 
 # Backdrops
 sub backdrops {
-    my $self      = shift;
-    my $response  = $self->images();
+    my $self     = shift;
+    my $response = $self->images();
+  return unless $response;
     my $backdrops = $response->{backdrops} || [];
   return $self->_image_urls($backdrops);
 } ## end sub backdrops
