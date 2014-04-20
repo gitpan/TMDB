@@ -52,13 +52,14 @@ sub new {
             apiurl => {
                 type     => SCALAR,
                 optional => 1,
-                default  => 'http://api.themoviedb.org/3',
+                default  => 'https://api.themoviedb.org/3',
             },
             lang => {
                 type      => SCALAR,
                 optional  => 1,
                 callbacks => {
-                    'valid language code' => sub { $valid_lang_codes{ lc $_[0] } },
+                    'valid language code' =>
+                      sub { $valid_lang_codes{ lc $_[0] } },
                 },
             },
             client => {
@@ -104,9 +105,12 @@ sub talk {
     my ( $self, $args ) = @_;
 
     # Build Call
-    my $url = $self->apiurl . '/' . $args->{method} . '?api_key=' . $self->apikey;
+    my $url
+      = $self->apiurl . '/' . $args->{method} . '?api_key=' . $self->apikey;
     if ( $args->{params} ) {
-        foreach my $param ( sort { lc $a cmp lc $b } keys %{ $args->{params} } ) {
+        foreach
+          my $param ( sort { lc $a cmp lc $b } keys %{ $args->{params} } )
+        {
           next unless defined $args->{params}->{$param};
             $url .= "&${param}=" . $args->{params}->{$param};
         } ## end foreach my $param ( sort { ...})
@@ -123,12 +127,14 @@ sub talk {
     if ( $self->debug ) {
         warn "DEBUG: Got a successful response\n" if $response->{success};
         warn "DEBUG: Got Status -> $response->{status}\n";
-        warn "DEBUG: Got Reason -> $response->{reason}\n"   if $response->{reason};
-        warn "DEBUG: Got Content -> $response->{content}\n" if $response->{content};
+        warn "DEBUG: Got Reason -> $response->{reason}\n"
+          if $response->{reason};
+        warn "DEBUG: Got Content -> $response->{content}\n"
+          if $response->{content};
     } ## end if ( $self->debug )
 
     # Return
-  return unless $response->{success};  # Error
+  return unless $self->_check_status($response);
     if ( $args->{want_headers} and exists $response->{headers} ) {
 
         # Return headers only
@@ -136,7 +142,7 @@ sub talk {
     } ## end if ( $args->{want_headers...})
   return unless $response->{content};  # Blank Content
   return $self->json->decode(
-        Encode::decode( 'utf-8-strict', $response->{content} ) );  # Real Response
+        Encode::decode( 'utf-8-strict', $response->{content} ) ); # Real Response
 } ## end sub talk
 
 ## ====================
@@ -170,6 +176,39 @@ sub paginate_results {
   return @$results if wantarray;
   return $results;
 } ## end sub paginate_results
+
+#######################
+# INTERNAL
+#######################
+
+# Check Response status
+sub _check_status {
+    my ( $self, $response ) = @_;
+
+    if ( $response->{success} ) {
+      return 1;
+    }
+
+    if ( $response->{content} ) {
+        my ( $code, $message );
+        my $ok = eval {
+
+            my $status = $self->json->decode(
+                Encode::decode( 'utf-8-strict', $response->{content} ) );
+
+            $code    = $status->{status_code};
+            $message = $status->{status_message};
+
+            1;
+        };
+
+        if ( $ok and $code and $message ) {
+            carp sprintf( 'TMDB API Error (%s): %s', $code, $message );
+        }
+    } ## end if ( $response->{content...})
+
+  return;
+} ## end sub _check_status
 
 #######################
 1;

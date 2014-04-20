@@ -10,7 +10,7 @@ use Carp qw(croak carp);
 #######################
 # VERSION
 #######################
-our $VERSION = '0.09';
+our $VERSION = '0.10';
 
 #######################
 # LOAD CPAN MODULES
@@ -115,7 +115,7 @@ TMDB - Perl wrapper for The MovieDB API
       my $movie_website   = $movie->homepage();
       my @movie_directors = $movie->director;
       my @movie_actors    = $movie->actors;
-	  my @studios         = $movie->studios;
+      my @studios         = $movie->studios;
 
       printf( "%s (%s)\n%s", $movie_title, $movie_year,
         '=' x length($movie_title) );
@@ -146,8 +146,8 @@ TMDB - Perl wrapper for The MovieDB API
 
 L<The MovieDB|http://www.themoviedb.org/> is a free and open movie
 database. This module provides a Perl wrapper to L<The MovieDB
-API|http://help.themoviedb.org/kb/api/about-3>. In order to use this
-module, you must first get an API key by L<signing
+API|http://docs.themoviedb.apiary.io/>. In order to use this module,
+you must first get an API key by L<signing
 up|http://www.themoviedb.org/account/signup>.
 
 B<NOTE:> TMDB-v0.04 and higher uses TheMoviDB API version C</3>. This
@@ -184,14 +184,18 @@ codes|http://en.wikipedia.org/wiki/List_of_ISO_639-1_codes>.
 
 =item client
 
-You can provide your own L<HTTP::Client> object, otherwise a default
-one is used.
+You can provide your own L<HTTP::Tiny> object, otherwise a default one
+is used.
 
 =item json
 
 You can provide your own L<JSON> implementation that can C<decode>
 JSON. This will fall back to using L<JSON::Any>. However, L<JSON::XS>
 is recommended.
+
+=item apiurl
+
+The API endpoint to use. Defaults to L<https://api.themoviedb.org/3>
 
 =back
 
@@ -348,28 +352,28 @@ L<http://docs.themoviedb.apiary.io/#configuration> for more details.
 
 =head1 COMPANY
 
-		# Get the company object
-		my $company = $tmdb->company(id => '1');
+        # Get the company object
+        my $company = $tmdb->company(id => '1');
 
-		# Company info (as returned by the API)
-		use Data::Dumper qw(Dumper);
-		print Dumper $company->info;
-		print Dumper $company->movies;
+        # Company info (as returned by the API)
+        use Data::Dumper qw(Dumper);
+        print Dumper $company->info;
+        print Dumper $company->movies;
 
-		# Filtered company data
-		print $company->name; # Name of the Company
-		print $company->logo; # Logo
+        # Filtered company data
+        print $company->name; # Name of the Company
+        print $company->logo; # Logo
 
-		# Get TMDB's version to check if anything changed
-		print $company->version;
+        # Get TMDB's version to check if anything changed
+        print $company->version;
 
 =head1 GENRE
 
-		# Get a list
-		my @genres = $tmdb->genre->list();
+        # Get a list
+        my @genres = $tmdb->genre->list();
 
-		# Get a list of movies
-		my @movies = $tmdb->genre(id => '35')->movies;
+        # Get a list of movies
+        my @movies = $tmdb->genre(id => '35')->movies;
 
 
 =head1 DEPENDENCIES
@@ -420,7 +424,7 @@ Mithun Ayachit C<mithun@cpan.org>
 
 =head1 LICENSE AND COPYRIGHT
 
-Copyright (c) 2013, Mithun Ayachit. All rights reserved.
+Copyright (c) 2014, Mithun Ayachit. All rights reserved.
 
 This module is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself. See L<perlartistic>.
