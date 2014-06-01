@@ -10,7 +10,7 @@ use Carp qw(croak carp);
 #######################
 # VERSION
 #######################
-our $VERSION = '0.10';
+our $VERSION = '0.11';
 
 #######################
 # LOAD CPAN MODULES
@@ -237,6 +237,12 @@ L<http://docs.themoviedb.apiary.io/#configuration> for more details.
       my @results = $search->keyword('thriller');       # Search for keywords
       my @results = $search->collection('Star Wars');   # Search for collections
       my @results = $search->list('top 250');           # Search lists
+
+      # Find using external sources
+      my @results = $search->find(
+          id     => 'tt12345',
+          source => 'imdb_id'
+      );
 
       # Discover
       my @results = $search->discover(
